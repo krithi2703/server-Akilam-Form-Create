@@ -2,10 +2,12 @@ const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require('./authMiddleware');
+const multer = require('multer');
+const upload = multer();
 
 // ✅ POST: Submit form data
-router.post("/submit", async (req, res) => {
-  const { formId, values } = req.body;
+router.post("/submit", upload.any(), async (req, res) => {
+  const { formId, ...values } = req.body;
   const emailOrPhoneNo = req.headers["userid"];
   const submissionId = Date.now();
 

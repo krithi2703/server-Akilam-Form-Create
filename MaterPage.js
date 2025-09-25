@@ -201,7 +201,7 @@ router.get("/", verifyToken, async (req, res) => {
           CONVERT(VARCHAR(10), f.CreatedDate, 120) AS CreatedDate,
           CONVERT(VARCHAR(10), f.Enddate, 120) AS Enddate,
           f.Fee,
-          f.Active
+          CAST(f.Active AS INT) AS Active
         FROM FormMaster_dtl f
         LEFT JOIN Register_dtl r ON f.UserId = r.Id
         WHERE f.UserId = @UserId

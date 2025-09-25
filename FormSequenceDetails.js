@@ -14,6 +14,7 @@ router.get("/show", verifyToken, async (req, res) => {
         SELECT 
           fm.FormId,
           fm.FormName,
+          fm.Enddate,
           dc.Id AS ColId,
           dc.ColumnName,
           dc.DataType,
@@ -25,7 +26,7 @@ router.get("/show", verifyToken, async (req, res) => {
         INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
         INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
         INNER JOIN Register_dtl r ON fd.UserId = r.Id
-        WHERE fd.UserId = @UserId AND fd.Active = 1
+        WHERE fd.UserId = @UserId AND fd.Active = 1 AND fm.Enddate >= GETDATE()
         ORDER BY fd.FormNo, fm.FormId, fm.FormName, fd.SequenceNo
       `);
 
@@ -107,6 +108,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
   console.log(
     `[FormColumns] Attempting to fetch columns for userId: ${req.user.UserId}, formId: ${req.query.formId}, formNo: ${req.query.formNo}`
   );
+  console.log(`[FormColumns] User ID from req.user: ${req.user ? req.user.UserId : 'undefined'}`);
   try {
     const { formId, formNo } = req.query;
 
