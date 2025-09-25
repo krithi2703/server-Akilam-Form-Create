@@ -179,8 +179,8 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
     );
 
     if (result.recordset.length === 0) {
-      console.log("[FormColumns] No records found for the given criteria.");
-      return res.status(404).json({ message: "No columns found for this form version" });
+      console.log("[FormColumns] No records found for the given criteria. Returning empty array.");
+      return res.json([]); // Return an empty array with 200 OK status
     }
 
     res.json(result.recordset);

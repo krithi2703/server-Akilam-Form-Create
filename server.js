@@ -15,11 +15,15 @@ const formregisterRouter = require('./Formregistred');     // Form register rout
 const dropdownDtlRouter = require('./dropdownDtlRoutes');
 const radioBoxDtlRouter = require('./radioBoxDtlRoutes');
 const checkBoxDtlRouter = require('./checkBoxDtlRoutes');
+const formNameRoutes = require('./formNameRoutes');
+const validation = require('./Validation');
+
 
 const app = express();
 
 // Load port from .env or fallback
 const PORT = process.env.PORT || 5000;
+//const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
 app.use(
@@ -59,6 +63,8 @@ app.use('/api/formregister', formregisterRouter);
 app.use('/api/dropdown-dtl', dropdownDtlRouter);
 app.use('/api/radiobox-dtl', radioBoxDtlRouter);
 app.use('/api/checkbox-dtl', checkBoxDtlRouter);
+app.use('/api/public/formname', formNameRoutes);
+app.use('/api/validation', validation);
 
 // ---------------- Health Check ----------------
 app.get('/api/test', (req, res) => {
@@ -72,6 +78,9 @@ app.use('/api/*', (req, res) => {
 });
 
 // --- Serve Static Files and Handle SPA Routing ---
+// Serve uploaded files
+app.use(express.static('public'));
+
 const clientBuildPath = path.resolve(__dirname, '..', 'Client', 'dist');
 app.use(express.static(clientBuildPath));
 

@@ -3,7 +3,19 @@ const router = express.Router();
 const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require('./authMiddleware');
 const multer = require('multer');
-const upload = multer();
+const path = require('path');
+
+// Configure multer for file storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/')
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)) // Append extension
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // ✅ POST: Submit form data
 router.post("/submit", upload.any(), async (req, res) => {
@@ -11,7 +23,7 @@ router.post("/submit", upload.any(), async (req, res) => {
   const emailOrPhoneNo = req.headers["userid"];
   const submissionId = Date.now();
 
-  if (!formId || !values || Object.keys(values).length === 0) {
+  if (!formId || (!values && !req.files)) {
     return res.status(400).json({ message: "Form ID and values are required." });
   }
   if (!emailOrPhoneNo) {
@@ -34,10 +46,21 @@ router.post("/submit", upload.any(), async (req, res) => {
     }
     const userId = userResult.recordset[0].Id;
 
+    // Combine body values and file values
+    const allValues = { ...values };
+    if (req.files) {
+      req.files.forEach(file => {
+        // When a file is uploaded, its details are in `req.files`.
+        // The code creates a path to where the file is stored on the server.
+        // For example: /uploads/1678886400000.jpg
+        allValues[file.fieldname] = `/uploads/${file.filename}`;
+      });
+    }
+
     // 🔹 Insert values
-    for (const colId in values) {
-      if (Object.hasOwnProperty.call(values, colId)) {
-        let value = values[colId];
+    for (const colId in allValues) {
+      if (Object.hasOwnProperty.call(allValues, colId)) {
+        let value = allValues[colId];
         if (typeof value === "boolean") value = value ? "1" : "0";
 
         await transaction
@@ -46,7 +69,7 @@ router.post("/submit", upload.any(), async (req, res) => {
           .input("ColId", sql.Int, colId)
           .input("SubmissionId", sql.BigInt, submissionId)
           .input("ColumnValues", sql.NVarChar(sql.MAX), String(value ?? ""))
-          .input("EmailorPhoneno", sql.Int, userId) // Use userId instead of email/phone
+          .input("EmailorPhoneno", sql.Int, userId)
           .input("Active", sql.Bit, 1)
           .query(`
             INSERT INTO FormValues_dtl (FormId, ColId, SubmissionId, ColumnValues, EmailorPhoneno, Active)
@@ -68,12 +91,12 @@ router.post("/submit", upload.any(), async (req, res) => {
 });
 
 // ✅ PUT: Update form values
-router.put("/values/:submissionId", async (req, res) => {
+router.put("/values/:submissionId", upload.any(), async (req, res) => {
   const { submissionId } = req.params;
-  const { formId, values } = req.body;
+  const { formId, ...restOfBody } = req.body;
   const emailOrPhoneNo = req.headers["userid"];
 
-  if (!formId || !values || Object.keys(values).length === 0) {
+  if (!formId || !restOfBody || Object.keys(restOfBody).length === 0) {
     return res.status(400).json({ message: "Form ID and values are required." });
   }
   if (!submissionId) {
@@ -99,9 +122,17 @@ router.put("/values/:submissionId", async (req, res) => {
     }
     const userId = userResult.recordset[0].Id;
 
-    for (const colId in values) {
-      if (Object.hasOwnProperty.call(values, colId)) {
-        let value = values[colId];
+    // Combine body values and file values
+    const allValues = { ...restOfBody };
+    if (req.files) {
+      req.files.forEach(file => {
+        allValues[file.fieldname] = `/uploads/${file.filename}`;
+      });
+    }
+
+    for (const colId in allValues) {
+      if (Object.hasOwnProperty.call(allValues, colId)) {
+        let value = allValues[colId];
         if (typeof value === "boolean") value = value ? "1" : "0";
 
         await transaction
