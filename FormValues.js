@@ -4,6 +4,26 @@ const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require('./authMiddleware');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs').promises; // For file system operations
+const pdf = require('pdf-parse'); // Import pdf-parse
+
+// Helper function to validate PDF page count
+const validatePdfPageCount = async (filePath) => {
+  try {
+    const dataBuffer = await fs.readFile(filePath);
+    const pdfData = await pdf(dataBuffer);
+    const pageCount = pdfData.numpages;
+
+    if (pageCount >= 2 && pageCount <= 3) {
+      return { isValid: true, message: "" };
+    } else {
+      return { isValid: false, message: "PDF must be between 2 and 3 pages." };
+    }
+  } catch (error) {
+    console.error("Error parsing PDF for page count:", error);
+    return { isValid: false, message: "Could not validate PDF page count." };
+  }
+};
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
@@ -62,15 +82,37 @@ router.post("/submit", upload.any(), async (req, res) => {
     }
     const userId = userResult.recordset[0].Id;
 
+    // 🔹 Fetch column details to get DataType for validation
+    const columnsResponse = await transaction.request()
+      .input("FormId", sql.Int, formId)
+      .query(`
+        SELECT dc.Id AS ColId, dc.DataType
+        FROM FormDetails_dtl fd
+        INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
+        WHERE fd.FormId = @FormId AND fd.Active = 1
+      `);
+    const formColumns = columnsResponse.recordset;
+
     // Combine body values and file values
     const allValues = { ...values };
     if (req.files) {
-      req.files.forEach(file => {
-        // When a file is uploaded, its details are in `req.files`.
-        // The code creates a path to where the file is stored on the server.
-        // For example: /uploads/1678886400000.jpg
+      for (const file of req.files) {
+        const colId = parseInt(file.fieldname, 10);
+        const column = formColumns.find(c => c.ColId === colId);
+
+        if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
+          const { isValid, message } = await validatePdfPageCount(file.path);
+          if (!isValid) {
+            await fs.unlink(file.path); // Delete the uploaded invalid file
+            await transaction.rollback();
+            return res.status(400).json({ message: message });
+          }
+        }
+        // For photo, client-side validation is already in place for size.
+        // Server-side size validation for photo can be added here if needed.
+
         allValues[file.fieldname] = `/uploads/${file.filename}`;
-      });
+      }
     }
 
     // 🔹 Insert values
@@ -138,12 +180,37 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
     }
     const userId = userResult.recordset[0].Id;
 
+    // 🔹 Fetch column details to get DataType for validation
+    const columnsResponse = await transaction.request()
+      .input("FormId", sql.Int, formId)
+      .query(`
+        SELECT dc.Id AS ColId, dc.DataType
+        FROM FormDetails_dtl fd
+        INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
+        WHERE fd.FormId = @FormId AND fd.Active = 1
+      `);
+    const formColumns = columnsResponse.recordset;
+
     // Combine body values and file values
     const allValues = { ...restOfBody };
     if (req.files) {
-      req.files.forEach(file => {
+      for (const file of req.files) {
+        const colId = parseInt(file.fieldname, 10);
+        const column = formColumns.find(c => c.ColId === colId);
+
+        if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
+          const { isValid, message } = await validatePdfPageCount(file.path);
+          if (!isValid) {
+            await fs.unlink(file.path); // Delete the uploaded invalid file
+            await transaction.rollback();
+            return res.status(400).json({ message: message });
+          }
+        }
+        // For photo, client-side validation is already in place for size.
+        // Server-side size validation for photo can be added here if needed.
+
         allValues[file.fieldname] = `/uploads/${file.filename}`;
-      });
+      }
     }
 
     for (const colId in allValues) {

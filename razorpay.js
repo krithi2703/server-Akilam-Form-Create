@@ -57,7 +57,8 @@ const registerRazorpayRoutes = (app) => {
 
     } catch (error) {
       console.error('Create Order Error:', error);
-      res.status(500).send('Error creating order');
+      // Send a more detailed error message to the client for debugging
+      res.status(500).json({ message: 'Error creating order', details: error.message });
     }
   });
 
@@ -158,7 +159,8 @@ const registerRazorpayRoutes = (app) => {
     } catch (error) {
       await transaction.rollback();
       console.error('Verify Payment Error:', error);
-      res.status(500).send('Error verifying payment');
+      // Send a more detailed error message to the client for debugging
+      res.status(500).json({ message: 'Error verifying payment', details: error.message });
     }
   });
 };
