@@ -35,6 +35,22 @@ router.post("/submit", upload.any(), async (req, res) => {
 
   try {
     await transaction.begin();
+    
+    // Check if the form requires payment
+    const feeResult = await transaction.request()
+      .input("FormId", sql.Int, formId)
+      .query(`SELECT Fee FROM FormMaster_dtl WHERE FormId = @FormId`);
+
+    if (feeResult.recordset.length > 0 && feeResult.recordset[0].Fee > 0) {
+      // This form requires payment, so we should not submit it here.
+      // The submission should happen through the payment verification endpoint.
+      await transaction.rollback();
+      return res.status(402).json({ 
+        message: "Payment required. Please use the payment flow to submit.",
+        paymentRequired: true 
+      });
+    }
+
 
     // 🔹 Get UserId (Id) from FormRegister_dtl
     const userResult = await transaction.request()
@@ -476,5 +492,7 @@ router.get("/check-submission", async (req, res) => {
     res.status(500).json({ message: "Server error while checking form submission." });
   }
 });
+
+
 
 module.exports = router;

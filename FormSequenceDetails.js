@@ -131,6 +131,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
         fd.Id,
         fm.FormId,
         fm.FormName,
+        fm.Fee,
         ISNULL(CONVERT(VARCHAR(10), fm.CreatedDate, 120), '') AS Startdate, -- Select startdate from FormMaster_dtl
         ISNULL(CONVERT(VARCHAR(10), fm.Enddate, 120), '') AS Enddate, -- Select enddate from FormMaster_dtl
         dc.Id AS ColId,
@@ -139,7 +140,8 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
         fd.SequenceNo,
         fd.FormNo,
         r.Name AS UserName,
-        fd.Active
+        fd.Active,
+        fd.IsValid
       FROM FormDetails_dtl fd
       INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
       INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
@@ -352,6 +354,37 @@ router.put("/sequence/:id", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Error updating sequence:", err);
     res.status(500).json({ message: "Server error while updating sequence." });
+  }
+});
+
+// ---------------- PUT: update IsValid status for a form detail ----------------
+router.put("/update-isvalid/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { isValid } = req.body; // Expecting a boolean
+
+  if (typeof isValid !== 'boolean') {
+    return res.status(400).json({ message: "isValid (boolean) is required." });
+  }
+
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input("Id", sql.Int, id)
+      .input("IsValid", sql.Bit, isValid ? 1 : 0)
+      .query(`
+        UPDATE FormDetails_dtl
+        SET IsValid = @IsValid
+        WHERE Id = @Id
+      `);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ message: "Form detail not found." });
+    }
+
+    res.json({ message: "IsValid status updated successfully." });
+  } catch (err) {
+    console.error("Error updating IsValid status:", err);
+    res.status(500).json({ message: "Server error while updating IsValid status." });
   }
 });
 
