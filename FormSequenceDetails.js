@@ -105,10 +105,10 @@ router.get("/user/forms", verifyToken, async (req, res) => {
 // routes/formdetails.js
 // ---------------- GET: fetch columns of a selected form ----------------
 router.get("/user/form-columns", verifyToken, async (req, res) => {
-  console.log(
-    `[FormColumns] Attempting to fetch columns for userId: ${req.user.UserId}, formId: ${req.query.formId}, formNo: ${req.query.formNo}`
-  );
-  console.log(`[FormColumns] User ID from req.user: ${req.user ? req.user.UserId : 'undefined'}`);
+  //console.log(
+   // `[FormColumns] Attempting to fetch columns for userId: ${req.user.UserId}, formId: ${req.query.formId}, formNo: ${req.query.formNo}`
+  //);
+  //console.log(`[FormColumns] User ID from req.user: ${req.user ? req.user.UserId : 'undefined'}`);
   try {
     const { formId, formNo } = req.query;
 
@@ -160,7 +160,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
 
     query += ` ORDER BY fd.FormNo, fd.SequenceNo`;
 
-    console.log(`[FormColumns] Executing SQL Query:\n${query}`);
+   // console.log(`[FormColumns] Executing SQL Query:\n${query}`);
 
     const request = pool
       .request()
@@ -176,12 +176,12 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
 
     const result = await request.query(query);
 
-    console.log(
-      `[FormColumns] Successfully fetched ${result.recordset.length} columns for formId: ${formId}, formNo: ${formNo || 'latest'}`
-    );
+    // console.log(
+    //   `[FormColumns] Successfully fetched ${result.recordset.length} columns for formId: ${formId}, formNo: ${formNo || 'latest'}`
+    // );
 
     if (result.recordset.length === 0) {
-      console.log("[FormColumns] No records found for the given criteria. Returning empty array.");
+      // console.log("[FormColumns] No records found for the given criteria. Returning empty array.");
       return res.json([]); // Return an empty array with 200 OK status
     }
 

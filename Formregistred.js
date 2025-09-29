@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // ---------------------- INSERT: Register user (provisional) ----------------------
 router.post('/insert', async (req, res) => {
-    console.log('Formregistred.js: /insert route hit!');
+    //console.log('Formregistred.js: /insert route hit!');
     const { identifier, formId } = req.body;
 
     if (!identifier || !formId) {
