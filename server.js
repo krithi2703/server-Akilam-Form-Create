@@ -33,8 +33,9 @@ const PORT = process.env.PORT || 8500;
 // ---------------- Middleware ----------------
 app.use(
   cors({
-    origin: 'http://136.185.14.8:5558',   // <-- for prod, update to your frontend host
+    //origin: 'http://136.185.14.8:5558',   // <-- for prod, update to your frontend host
     //origin: 'http://localhost:5173',       // <-- for local dev
+    origin:'http://103.185.75.196:8500',   // Cloud 
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'userid'],
     credentials: true,
