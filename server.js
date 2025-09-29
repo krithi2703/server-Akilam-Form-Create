@@ -27,14 +27,14 @@ const app = express();
 // RAZORPAY_KEY_SECRET=YOUR_RAZORPAY_KEY_SECRET
 
 // Load port from .env or fallback
-const PORT = process.env.PORT || 5000;
-//const PORT = process.env.PORT || 8500;
+//const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
 app.use(
   cors({
-    //origin: 'http://136.185.14.8:5558',   // <-- for prod, update to your frontend host
-    origin: 'http://localhost:5173',       // <-- for local dev
+    origin: 'http://136.185.14.8:5558',   // <-- for prod, update to your frontend host
+    //origin: 'http://localhost:5173',       // <-- for local dev
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'userid'],
     credentials: true,
