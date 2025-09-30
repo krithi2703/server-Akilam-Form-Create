@@ -1,0 +1,8 @@
+backend:
+    build: /palani/server-Akilam-Form-Create-main  # Node.js backend path
+    container_name: registration_backend
+    ports:
+      - "8500:8500"                               # Backend API port
+    env_file:
+      - ./.env
+    restart: always
