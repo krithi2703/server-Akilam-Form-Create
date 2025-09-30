@@ -134,6 +134,7 @@ const radioBoxDtlRouter = require('./radioBoxDtlRoutes');
 const checkBoxDtlRouter = require('./checkBoxDtlRoutes');
 const formNameRoutes = require('./formNameRoutes');
 const validation = require('./Validation');
+const submissionsRouter = require('./submissionsRoutes'); // Import submissions routes
 const { registerRazorpayRoutes } = require('./razorpay');
 
 const app = express();
@@ -142,6 +143,8 @@ const PORT = process.env.PORT || 8500;
 // ---------------- Middleware ----------------
 app.use(
   cors({
+    //origin: 'http://136.185.14.8:5558',   // <-- for prod, update to your frontend host
+    //origin: 'http://localhost:5173',       // <-- for local dev
     origin: 'http://103.185.75.196:5558', // Frontend URL
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'userid'],
@@ -179,6 +182,7 @@ app.use('/api/radiobox-dtl', radioBoxDtlRouter);
 app.use('/api/checkbox-dtl', checkBoxDtlRouter);
 app.use('/api/public/formname', formNameRoutes);
 app.use('/api/validation', validation);
+app.use('/api/submissions', submissionsRouter);
 
 // ---------------- Health Check ----------------
 app.get('/api/test', (req, res) => {
