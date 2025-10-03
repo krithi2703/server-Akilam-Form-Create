@@ -2,6 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('./dbConfig');
 
+// Endpoint to get all form names
+router.get('/', async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query('SELECT FormId as formId, FormName as formName FROM FormMaster_dtl WHERE Active = 1');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching all form names:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Endpoint to get form name by ID (publicly accessible)
 router.get('/:formId', async (req, res) => {
   const { formId } = req.params;
@@ -13,7 +26,7 @@ router.get('/:formId', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('FormId', sql.Int, formId)
-      .query('SELECT FormName FROM FormMaster_dtl WHERE FormId = @FormId');
+      .query('SELECT FormName FROM FormMaster_dtl WHERE FormId = @FormId and Active = 1');
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'Form not found' });

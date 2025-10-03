@@ -32,6 +32,7 @@ router.get('/count-by-form', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request().query(`
       SELECT
+        fm.FormId,
         fm.FormName,
         COUNT(DISTINCT fv.SubmissionId) as SubmissionCount
       FROM
@@ -39,6 +40,7 @@ router.get('/count-by-form', async (req, res) => {
       JOIN
         FormMaster_dtl fm ON fv.FormId = fm.FormId
       GROUP BY
+        fm.FormId,
         fm.FormName
       ORDER BY
         fm.FormName

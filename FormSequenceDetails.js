@@ -132,6 +132,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
         fm.FormId,
         fm.FormName,
         fm.Fee,
+        fm.ImageOrLogo,
         ISNULL(CONVERT(VARCHAR(10), fm.CreatedDate, 120), '') AS Startdate, -- Select startdate from FormMaster_dtl
         ISNULL(CONVERT(VARCHAR(10), fm.Enddate, 120), '') AS Enddate, -- Select enddate from FormMaster_dtl
         dc.Id AS ColId,
@@ -194,7 +195,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
 
 // ---------------- POST: insert new form detail (with auto-increment FormNo) ----------------
 router.post("/insert-formdetails", verifyToken, async (req, res) => {
-  const { formId, colId, sequenceNo, active, formNo } = req.body;
+  const { formId, colId, sequenceNo, active, formNo, bannerimage } = req.body;
   const pool = await poolPromise;
   const transaction = pool.transaction();
 
@@ -230,9 +231,10 @@ router.post("/insert-formdetails", verifyToken, async (req, res) => {
       .input("FormNo", sql.Int, targetFormNo)
       .input("UserId", sql.Int, req.user.UserId)
       .input("Active", sql.Bit, active !== undefined ? active : 1)
+      .input("BannerImage", sql.NVarChar(255), bannerimage)
       .query(`
-        INSERT INTO FormDetails_dtl (FormId, ColId, SequenceNo, FormNo, UserId, Active)
-        VALUES (@FormId, @ColId, @SequenceNo, @FormNo, @UserId, @Active);
+        INSERT INTO FormDetails_dtl (FormId, ColId, SequenceNo, FormNo, UserId, Active, BannerImage)
+        VALUES (@FormId, @ColId, @SequenceNo, @FormNo, @UserId, @Active, @BannerImage);
 
         SELECT SCOPE_IDENTITY() AS NewId;
       `);

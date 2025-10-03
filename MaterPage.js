@@ -2,6 +2,20 @@ const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require("./authMiddleware");
+const multer = require("multer");
+const path = require("path");
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./public/uploads"); // Destination folder for uploads
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // ---------------- Get logged-in user info ----------------
 router.get("/me", verifyToken, async (req, res) => {
@@ -26,10 +40,38 @@ router.get("/me", verifyToken, async (req, res) => {
   }
 });
 
+// ---------------- Upload Image ----------------
+router.post("/upload/image", verifyToken, (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading.
+      console.error("Multer Error:", err);
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      // An unknown error occurred when uploading.
+      console.error("Unknown Upload Error:", err);
+      return res.status(500).json({ error: "An unknown error occurred during upload." });
+    }
+    next(); // Everything went fine.
+  });
+}, (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
+    }
+    // Return the path to the uploaded file
+    const filePath = `/uploads/${req.file.filename}`;
+    res.status(200).json({ filePath });
+  } catch (err) {
+    console.error("Image Upload Error (in handler):", err);
+    res.status(500).json({ error: "Failed to upload image." });
+  }
+});
+
 // ---------------- Insert new form ----------------
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { formName, createdDate, enddate, fee } = req.body;
+    const { formName, createdDate, enddate, fee, imageorlogo } = req.body;
 
     if (!formName) {
       return res.status(400).json({ error: "Form Name is required" });
@@ -49,9 +91,10 @@ router.post("/", verifyToken, async (req, res) => {
       .input("Enddate", sql.DateTime, enddate ? new Date(enddate) : null)
       .input("Fee", sql.Decimal(10, 2), fee ? parseFloat(fee) : null)
       .input("Active", sql.Bit, 1)
+      .input("ImageOrLogo", sql.NVarChar(255), imageorlogo || null)
       .query(`
-        INSERT INTO FormMaster_dtl (FormName, UserId, CreatedDate, Enddate, Fee, Active)
-        VALUES (@FormName, @UserId, @CreatedDate, @Enddate, @Fee, @Active);
+        INSERT INTO FormMaster_dtl (FormName, UserId, CreatedDate, Enddate, Fee, Active, ImageOrLogo)
+        VALUES (@FormName, @UserId, @CreatedDate, @Enddate, @Fee, @Active, @ImageOrLogo);
         SELECT SCOPE_IDENTITY() AS NewFormId;
       `);
 
@@ -82,7 +125,8 @@ router.get("/:id", verifyToken, async (req, res) => {
           CONVERT(VARCHAR(10), CreatedDate, 120) AS CreatedDate,
           CONVERT(VARCHAR(10), Enddate, 120) AS Enddate,
           Fee,
-          Active
+          Active,
+          ImageOrLogo
         FROM FormMaster_dtl 
         WHERE FormId = @FormId AND UserId = @UserId
       `);
@@ -101,7 +145,7 @@ router.get("/:id", verifyToken, async (req, res) => {
 // ---------------- Update form ----------------
 router.put("/:id", verifyToken, async (req, res) => {
   try {
-    const { formName, createdDate, enddate, fee } = req.body;
+    const { formName, createdDate, enddate, fee, imageorlogo } = req.body;
 
     if (!formName) {
       return res.status(400).json({ error: "Form Name is required" });
@@ -127,12 +171,14 @@ router.put("/:id", verifyToken, async (req, res) => {
       .input("CreatedDate", sql.DateTime, createdDate ? new Date(createdDate) : new Date())
       .input("Enddate", sql.DateTime, enddate ? new Date(enddate) : null)
       .input("Fee", sql.Decimal(10, 2), fee ? parseFloat(fee) : null)
+      .input("ImageOrLogo", sql.NVarChar(255), imageorlogo || null)
       .query(`
         UPDATE FormMaster_dtl
         SET FormName = @FormName,
             CreatedDate = @CreatedDate,
             Enddate = @Enddate,
-            Fee = @Fee
+            Fee = @Fee,
+            ImageOrLogo = @ImageOrLogo
         WHERE FormId = @FormId
       `);
 
@@ -201,7 +247,8 @@ router.get("/", verifyToken, async (req, res) => {
           CONVERT(VARCHAR(10), f.CreatedDate, 120) AS CreatedDate,
           CONVERT(VARCHAR(10), f.Enddate, 120) AS Enddate,
           f.Fee,
-          CAST(f.Active AS INT) AS Active
+          CAST(f.Active AS INT) AS Active,
+          f.ImageOrLogo
         FROM FormMaster_dtl f
         LEFT JOIN Register_dtl r ON f.UserId = r.Id
         WHERE f.UserId = @UserId

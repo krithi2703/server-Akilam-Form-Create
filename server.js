@@ -138,6 +138,13 @@ const submissionsRouter = require('./submissionsRoutes'); // Import submissions 
 const { registerRazorpayRoutes } = require('./razorpay');
 
 const app = express();
+
+// // Configure Razorpay keys in your .env file:
+// // RAZORPAY_KEY_ID=YOUR_RAZORPAY_KEY_ID
+// // RAZORPAY_KEY_SECRET=YOUR_RAZORPAY_KEY_SECRET
+
+// // Load port from .env or fallback
+// const PORT = process.env.PORT || 5000;
 const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
