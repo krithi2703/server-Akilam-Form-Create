@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('./dbConfig');
+const verifyToken = require('./authMiddleware');
 
-// Endpoint to get all form names
-router.get('/', async (req, res) => {
+// Endpoint to get all form names for the logged-in user
+router.get('/', verifyToken, async (req, res) => {
   try {
     const pool = await poolPromise;
     const result = await pool.request()
-      .query('SELECT FormId as formId, FormName as formName FROM FormMaster_dtl WHERE Active = 1');
+      .input('UserId', sql.Int, req.user.UserId)
+      .query('SELECT FormId as formId, FormName as formName FROM FormMaster_dtl WHERE Active = 1 AND UserId = @UserId');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching all form names:', err);

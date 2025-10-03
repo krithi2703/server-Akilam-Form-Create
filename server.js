@@ -72,7 +72,7 @@
 // app.use('/api/dropdown-dtl', dropdownDtlRouter);
 // app.use('/api/radiobox-dtl', radioBoxDtlRouter);
 // app.use('/api/checkbox-dtl', checkBoxDtlRouter);
-// app.use('/api/public/formname', formNameRoutes);
+// app.use('/api/formname', formNameRoutes);
 // app.use('/api/validation', validation);
 // app.use('/api/submissions', submissionsRouter);
 
@@ -109,7 +109,6 @@
 // app.listen(PORT, () => {
 //   console.log(`✅ Server running on http://localhost:${PORT}`);
 // });
-
 
 
 
@@ -187,7 +186,7 @@ app.use('/api/formregister', formregisterRouter);
 app.use('/api/dropdown-dtl', dropdownDtlRouter);
 app.use('/api/radiobox-dtl', radioBoxDtlRouter);
 app.use('/api/checkbox-dtl', checkBoxDtlRouter);
-app.use('/api/public/formname', formNameRoutes);
+app.use('/api/formname', formNameRoutes);
 app.use('/api/validation', validation);
 app.use('/api/submissions', submissionsRouter);
 
@@ -224,4 +223,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
-

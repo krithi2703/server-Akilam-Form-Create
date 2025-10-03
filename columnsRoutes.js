@@ -143,4 +143,24 @@ router.get('/counts', verifyToken, async (req, res) => {
   }
 });
 
+// ---------------- GET: default columns ----------------
+router.get('/default', verifyToken, async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query(`
+        SELECT 
+          Id AS ColumnId, 
+          ColumnName, 
+          Type
+        FROM defaultColumns_dtl
+        ORDER BY Id
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching default columns:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 module.exports = router;
