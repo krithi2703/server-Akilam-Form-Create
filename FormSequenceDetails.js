@@ -21,7 +21,8 @@ router.get("/show", verifyToken, async (req, res) => {
           fd.SequenceNo,
           fd.FormNo,
           r.Name AS UserName,
-          fd.Active
+          fd.Active,
+          fd.BannerImage
         FROM FormDetails_dtl fd
         INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
         INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
@@ -45,7 +46,8 @@ router.get("/show", verifyToken, async (req, res) => {
         SequenceNo: row.SequenceNo,
         FormNo: row.FormNo,
         UserName: row.UserName,
-        Active: row.Active
+        Active: row.Active,
+        BannerImage: row.BannerImage
       });
       return acc;
     }, {});
@@ -142,7 +144,8 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
         fd.FormNo,
         r.Name AS UserName,
         fd.Active,
-        fd.IsValid
+        fd.IsValid,
+        fd.BannerImage
       FROM FormDetails_dtl fd
       INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
       INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
@@ -255,7 +258,7 @@ router.post("/insert-formdetails", verifyToken, async (req, res) => {
 
 // ---------------- PUT: update DynamicColumns and FormDetails_dtl ----------------
 router.put("/update-columns-formdetails/:id", verifyToken, async (req, res) => {
-  const { ColumnName, DataType, SequenceNo, FormId, Active } = req.body;
+  const { ColumnName, DataType, SequenceNo, FormId, Active, bannerimage } = req.body;
   const colId = req.params.id;
 
   if (!ColumnName || !DataType || !FormId) {
@@ -305,11 +308,13 @@ router.put("/update-columns-formdetails/:id", verifyToken, async (req, res) => {
       .input("SequenceNo", sql.Int, SequenceNo || 1)
       .input("UserId", sql.Int, req.user.UserId)
       .input("Active", sql.Bit, Active !== undefined ? Active : 1)
+      .input("BannerImage", sql.NVarChar(255), bannerimage)
       .query(`
         UPDATE FormDetails_dtl
         SET SequenceNo = @SequenceNo,
             UserId = @UserId,
-            Active = @Active
+            Active = @Active,
+            BannerImage = @BannerImage
         WHERE FormId = @FormId AND ColId = @ColId
       `);
 
@@ -439,7 +444,8 @@ router.get("/:id", verifyToken, async (req, res) => {
           fd.SequenceNo,
           fd.FormNo,
           r.Name AS UserName,
-          fd.Active
+          fd.Active,
+          fd.BannerImage
         FROM FormDetails_dtl fd
         INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
         INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id

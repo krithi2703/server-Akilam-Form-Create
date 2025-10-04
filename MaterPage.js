@@ -4,16 +4,10 @@ const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require("./authMiddleware");
 const multer = require("multer");
 const path = require("path");
+const sharp = require("sharp");
 
 // Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "./public/uploads"); // Destination folder for uploads
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
 
@@ -41,30 +35,25 @@ router.get("/me", verifyToken, async (req, res) => {
 });
 
 // ---------------- Upload Image ----------------
-router.post("/upload/image", verifyToken, (req, res, next) => {
-  upload.single("image")(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      // A Multer error occurred when uploading.
-      console.error("Multer Error:", err);
-      return res.status(400).json({ error: err.message });
-    } else if (err) {
-      // An unknown error occurred when uploading.
-      console.error("Unknown Upload Error:", err);
-      return res.status(500).json({ error: "An unknown error occurred during upload." });
-    }
-    next(); // Everything went fine.
-  });
-}, (req, res) => {
+router.post("/upload/image", verifyToken, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded." });
     }
-    // Return the path to the uploaded file
-    const filePath = `/uploads/${req.file.filename}`;
+
+    const filename = Date.now() + ".webp"; // Use webp for optimized images
+    const outputPath = path.join(__dirname, "public", "uploads", filename);
+
+    await sharp(req.file.buffer)
+      .resize({ width: 1200, height: 200, fit: 'fill' }) // Resize to 1200px width, 200px height, cover fit
+      .webp({ quality: 80 }) // Convert to webp for better compression
+      .toFile(outputPath);
+
+    const filePath = `/uploads/${filename}`;
     res.status(200).json({ filePath });
   } catch (err) {
-    console.error("Image Upload Error (in handler):", err);
-    res.status(500).json({ error: "Failed to upload image." });
+    console.error("Image Upload and Processing Error:", err);
+    res.status(500).json({ error: "Failed to upload and process image." });
   }
 });
 
