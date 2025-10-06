@@ -9,7 +9,7 @@ services:
     env_file:
       - ./.env
     volumes:
-      - uploads_data:/app/uploads                 # Persist uploaded files
+      - uploads_data:/app/public/uploads                 # Persist uploaded files
     restart: always
 
 volumes:
