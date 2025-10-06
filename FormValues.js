@@ -4,14 +4,14 @@ const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require('./authMiddleware');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs').promises; // For file system operations
+const cloudinary = require('./cloudinary');
+const streamifier = require('streamifier');
 const pdf = require('pdf-parse'); // Import pdf-parse
 
-// Helper function to validate PDF page count
-const validatePdfPageCount = async (filePath) => {
+// Helper function to validate PDF page count from a buffer
+const validatePdfPageCount = async (buffer) => {
   try {
-    const dataBuffer = await fs.readFile(filePath);
-    const pdfData = await pdf(dataBuffer);
+    const pdfData = await pdf(buffer);
     const pageCount = pdfData.numpages;
 
     if (pageCount >= 2 && pageCount <= 3) {
@@ -25,16 +25,8 @@ const validatePdfPageCount = async (filePath) => {
   }
 };
 
-// Configure multer for file storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/uploads/')
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)) // Append extension
-  }
-});
-
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // ✅ POST: Submit form data
@@ -96,22 +88,54 @@ router.post("/submit", upload.any(), async (req, res) => {
     // Combine body values and file values
     const allValues = { ...values };
     if (req.files) {
-      for (const file of req.files) {
-        const colId = parseInt(file.fieldname, 10);
-        const column = formColumns.find(c => c.ColId === colId);
+      const uploadPromises = req.files.map(file => {
+        return new Promise(async (resolve, reject) => {
+          try {
+            const colId = parseInt(file.fieldname, 10);
+            const column = formColumns.find(c => c.ColId === colId);
 
-        if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
-          const { isValid, message } = await validatePdfPageCount(file.path);
-          if (!isValid) {
-            await fs.unlink(file.path); // Delete the uploaded invalid file
-            await transaction.rollback();
-            return res.status(400).json({ message: message });
+            // Validate PDF page count from buffer
+            if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
+              const { isValid, message } = await validatePdfPageCount(file.buffer);
+              if (!isValid) {
+                // Reject the promise if validation fails
+                return reject(new Error(message));
+              }
+            }
+
+            // Upload to Cloudinary
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { resource_type: 'auto', folder: 'form_submissions' },
+              (error, result) => {
+                if (error) {
+                  return reject(error);
+                }
+                allValues[file.fieldname] = result.secure_url;
+                resolve();
+              }
+            );
+
+            streamifier.createReadStream(file.buffer).pipe(uploadStream);
+
+          } catch (uploadError) {
+            reject(uploadError);
           }
-        }
-        // For photo, client-side validation is already in place for size.
-        // Server-side size validation for photo can be added here if needed.
+        });
+      });
 
-        allValues[file.fieldname] = `/uploads/${file.filename}`;
+      try {
+        // Wait for all file uploads to complete
+        await Promise.all(uploadPromises);
+      } catch (error) {
+        // If any upload or validation fails, rollback the transaction
+        await transaction.rollback();
+        // Provide specific feedback for PDF validation errors
+        if (error.message.includes("PDF must be between")) {
+            return res.status(400).json({ message: error.message });
+        }
+        // Generic error for other upload failures
+        console.error("Error uploading files to Cloudinary:", error);
+        return res.status(500).json({ message: "Error uploading one or more files." });
       }
     }
 
@@ -194,22 +218,54 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
     // Combine body values and file values
     const allValues = { ...restOfBody };
     if (req.files) {
-      for (const file of req.files) {
-        const colId = parseInt(file.fieldname, 10);
-        const column = formColumns.find(c => c.ColId === colId);
+      const uploadPromises = req.files.map(file => {
+        return new Promise(async (resolve, reject) => {
+          try {
+            const colId = parseInt(file.fieldname, 10);
+            const column = formColumns.find(c => c.ColId === colId);
 
-        if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
-          const { isValid, message } = await validatePdfPageCount(file.path);
-          if (!isValid) {
-            await fs.unlink(file.path); // Delete the uploaded invalid file
-            await transaction.rollback();
-            return res.status(400).json({ message: message });
+            // Validate PDF page count from buffer
+            if (column && column.DataType?.toLowerCase() === 'file' && file.mimetype === 'application/pdf') {
+              const { isValid, message } = await validatePdfPageCount(file.buffer);
+              if (!isValid) {
+                // Reject the promise if validation fails
+                return reject(new Error(message));
+              }
+            }
+
+            // Upload to Cloudinary
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { resource_type: 'auto', folder: 'form_submissions' },
+              (error, result) => {
+                if (error) {
+                  return reject(error);
+                }
+                allValues[file.fieldname] = result.secure_url;
+                resolve();
+              }
+            );
+
+            streamifier.createReadStream(file.buffer).pipe(uploadStream);
+
+          } catch (uploadError) {
+            reject(uploadError);
           }
-        }
-        // For photo, client-side validation is already in place for size.
-        // Server-side size validation for photo can be added here if needed.
+        });
+      });
 
-        allValues[file.fieldname] = `/uploads/${file.filename}`;
+      try {
+        // Wait for all file uploads to complete
+        await Promise.all(uploadPromises);
+      } catch (error) {
+        // If any upload or validation fails, rollback the transaction
+        await transaction.rollback();
+        // Provide specific feedback for PDF validation errors
+        if (error.message.includes("PDF must be between")) {
+            return res.status(400).json({ message: error.message });
+        }
+        // Generic error for other upload failures
+        console.error("Error uploading files to Cloudinary:", error);
+        return res.status(500).json({ message: "Error uploading one or more files." });
       }
     }
 
