@@ -1,8 +1,16 @@
-backend:
+version: "3.9"
+
+services:
+  backend:
     build: /palani/server-Akilam-Form-Create-main  # Node.js backend path
     container_name: registration_backend
     ports:
       - "8500:8500"                               # Backend API port
     env_file:
       - ./.env
+    volumes:
+      - uploads_data:/app/uploads                 # Persist uploaded files
     restart: always
+
+volumes:
+  uploads_data:
