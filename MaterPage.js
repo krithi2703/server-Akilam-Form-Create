@@ -4,14 +4,19 @@ const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require("./authMiddleware");
 const multer = require("multer");
 const path = require("path");
-const sharp = require("sharp");
-const cloudinary = require('./cloudinary');
-const streamifier = require('streamifier');
 
-// Multer storage configuration
-const storage = multer.memoryStorage();
+// --- Local File Storage using Multer ---
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Append extension
+  }
+});
 
 const upload = multer({ storage: storage });
+
 
 // ---------------- Get logged-in user info ----------------
 router.get("/me", verifyToken, async (req, res) => {
@@ -42,26 +47,12 @@ router.post("/upload/image", verifyToken, upload.single("image"), async (req, re
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded." });
     }
-
-    // Upload to Cloudinary
-    const uploadPromise = new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { resource_type: 'image', folder: 'master_images' }, // Specify folder for master images
-        (error, result) => {
-          if (error) {
-            return reject(error);
-          }
-          resolve(result);
-        }
-      );
-      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-    });
-
-    const result = await uploadPromise;
-    res.status(200).json({ filePath: result.secure_url }); // Return the secure Cloudinary URL
+    // Return the path to the uploaded file
+    const filePath = `/uploads/${req.file.filename}`;
+    res.status(200).json({ filePath: filePath });
   } catch (err) {
-    console.error("Image Upload to Cloudinary Error:", err);
-    res.status(500).json({ error: "Failed to upload image to Cloudinary." });
+    console.error("File Upload Error:", err);
+    res.status(500).json({ error: "Failed to upload file." });
   }
 });
 
@@ -119,8 +110,8 @@ router.get("/:id", verifyToken, async (req, res) => {
         SELECT 
           FormId,
           FormName,
-          CONVERT(VARCHAR(10), CreatedDate, 120) AS CreatedDate,
-          CONVERT(VARCHAR(10), Enddate, 120) AS Enddate,
+          FORMAT(CreatedDate,'dd-MMM-yyyy') AS CreatedDate,
+          FORMAT(Enddate,'dd-MMM-yyyy') AS Enddate,
           Fee,
           Active,
           ImageOrLogo
@@ -241,8 +232,8 @@ router.get("/", verifyToken, async (req, res) => {
           f.FormId,
           f.FormName,
           r.Name AS UserName,
-          CONVERT(VARCHAR(10), f.CreatedDate, 120) AS CreatedDate,
-          CONVERT(VARCHAR(10), f.Enddate, 120) AS Enddate,
+          FORMAT(CreatedDate,'dd-MMM-yyyy') AS CreatedDate,
+          FORMAT(Enddate,'dd-MMM-yyyy') AS Enddate,
           f.Fee,
           CAST(f.Active AS INT) AS Active,
           f.ImageOrLogo
