@@ -5,6 +5,8 @@ const verifyToken = require("./authMiddleware");
 const multer = require("multer");
 const path = require("path");
 const sharp = require("sharp");
+const cloudinary = require('./cloudinary');
+const streamifier = require('streamifier');
 
 // Multer storage configuration
 const storage = multer.memoryStorage();
@@ -41,19 +43,25 @@ router.post("/upload/image", verifyToken, upload.single("image"), async (req, re
       return res.status(400).json({ error: "No file uploaded." });
     }
 
-    const filename = Date.now() + ".webp"; // Use webp for optimized images
-    const outputPath = path.join(__dirname, "public", "uploads", filename);
+    // Upload to Cloudinary
+    const uploadPromise = new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { resource_type: 'image', folder: 'master_images' }, // Specify folder for master images
+        (error, result) => {
+          if (error) {
+            return reject(error);
+          }
+          resolve(result);
+        }
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    });
 
-    await sharp(req.file.buffer)
-      .resize({ width: 1200, height: 200, fit: 'fill' }) // Resize to 1200px width, 200px height, cover fit
-      .webp({ quality: 80 }) // Convert to webp for better compression
-      .toFile(outputPath);
-
-    const filePath = `/uploads/${filename}`;
-    res.status(200).json({ filePath });
+    const result = await uploadPromise;
+    res.status(200).json({ filePath: result.secure_url }); // Return the secure Cloudinary URL
   } catch (err) {
-    console.error("Image Upload and Processing Error:", err);
-    res.status(500).json({ error: "Failed to upload and process image." });
+    console.error("Image Upload to Cloudinary Error:", err);
+    res.status(500).json({ error: "Failed to upload image to Cloudinary." });
   }
 });
 
