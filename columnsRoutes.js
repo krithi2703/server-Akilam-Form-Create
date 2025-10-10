@@ -49,7 +49,7 @@ router.post('/', verifyToken, async (req, res) => {
         }
 
         await transaction.request()
-          .input('ColumnName', sql.NVarChar(100), col.ColumnName)
+          .input('ColumnName', sql.NVarChar(sql.MAX), col.ColumnName)
           .input('DataType', sql.NVarChar(50), col.DataType)
           .input('UserId', sql.Int, req.user.UserId)
           .input('IsActive', sql.Bit, 1)
@@ -84,7 +84,7 @@ router.put('/:id', verifyToken, async (req, res) => {
     const pool = await poolPromise;
     await pool.request()
       .input('Id', sql.Int, id)
-      .input('ColumnName', sql.NVarChar(100), ColumnName)
+      .input('ColumnName', sql.NVarChar(sql.MAX), ColumnName)
       .input('DataType', sql.NVarChar(50), DataType)
       .input('IsActive', sql.Bit, IsActive !== undefined ? IsActive : 1)
       .input('UserId', sql.Int, req.user.UserId)
