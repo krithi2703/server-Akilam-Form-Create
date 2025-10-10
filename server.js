@@ -20,6 +20,7 @@ const validation = require('./Validation');
 const submissionsRouter = require('./submissionsRoutes');
 const contentDtlRouter = require('./contentDtlRoutes');
 const { registerRazorpayRoutes } = require('./razorpay');
+const whatsappProxyRouter = require('./whatsappProxy');
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use('/api/formname', formNameRoutes);
 app.use('/api/validation', validation);
 app.use('/api/submissions', submissionsRouter);
 app.use('/api/content-dtl', contentDtlRouter);
+app.use('/api', whatsappProxyRouter);
 
 // ---------------- Health Check ----------------
 app.get('/api/test', (req, res) => {
