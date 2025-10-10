@@ -18,6 +18,7 @@ const checkBoxDtlRouter = require('./checkBoxDtlRoutes');
 const formNameRoutes = require('./formNameRoutes');
 const validation = require('./Validation');
 const submissionsRouter = require('./submissionsRoutes');
+const contentDtlRouter = require('./contentDtlRoutes');
 const { registerRazorpayRoutes } = require('./razorpay');
 
 const app = express();
@@ -76,6 +77,7 @@ app.use('/api/checkbox-dtl', checkBoxDtlRouter);
 app.use('/api/formname', formNameRoutes);
 app.use('/api/validation', validation);
 app.use('/api/submissions', submissionsRouter);
+app.use('/api/content-dtl', contentDtlRouter);
 
 // ---------------- Health Check ----------------
 app.get('/api/test', (req, res) => {

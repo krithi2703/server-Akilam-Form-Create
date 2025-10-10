@@ -24,17 +24,32 @@ router.get('/:formId', async (req, res) => {
     return res.status(400).json({ message: 'Form ID is required' });
   }
 
+  // Validate formId as an integer
+  if (isNaN(parseInt(formId))) {
+    return res.status(400).json({ message: 'Invalid Form ID format. Must be an integer.' });
+  }
+
   try {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('FormId', sql.Int, formId)
-      .query('SELECT FormName FROM FormMaster_dtl WHERE FormId = @FormId and Active = 1');
+      .query(`
+        SELECT
+            fm.FormName,
+            (SELECT TOP 1 fd.BannerImage FROM FormDetails_dtl fd WHERE fd.FormId = fm.FormId AND fd.BannerImage IS NOT NULL ORDER BY fd.Id DESC) as BannerImage
+        FROM
+            FormMaster_dtl fm
+        WHERE fm.FormId = @FormId and fm.Active = 1
+      `);
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'Form not found' });
     }
 
-    res.json({ FormName: result.recordset[0].FormName });
+    res.json({
+      FormName: result.recordset[0].FormName,
+      bannerImage: result.recordset[0].BannerImage
+    });
   } catch (err) {
     console.error('Error fetching form name:', err);
     res.status(500).json({ message: 'Internal server error' });

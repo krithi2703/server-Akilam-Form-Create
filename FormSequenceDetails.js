@@ -22,7 +22,8 @@ router.get("/show", verifyToken, async (req, res) => {
           fd.FormNo,
           r.Name AS UserName,
           fd.Active,
-          fd.BannerImage
+          fd.BannerImage,
+          fd.IsReadOnly
         FROM FormDetails_dtl fd
         INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
         INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
@@ -145,7 +146,8 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
         r.Name AS UserName,
         fd.Active,
         fd.IsValid,
-        fd.BannerImage
+        fd.BannerImage,
+        fd.IsReadOnly
       FROM FormDetails_dtl fd
       INNER JOIN FormMaster_dtl fm ON fd.FormId = fm.FormId
       INNER JOIN DynamicColumns dc ON fd.ColId = dc.Id
@@ -198,7 +200,7 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
 
 // ---------------- POST: insert new form detail (with auto-increment FormNo) ----------------
 router.post("/insert-formdetails", verifyToken, async (req, res) => {
-  const { formId, colId, sequenceNo, active, formNo, bannerimage } = req.body;
+  const { formId, colId, sequenceNo, active, formNo, bannerimage, isReadOnly } = req.body;
   const pool = await poolPromise;
   const transaction = pool.transaction();
 
@@ -235,9 +237,10 @@ router.post("/insert-formdetails", verifyToken, async (req, res) => {
       .input("UserId", sql.Int, req.user.UserId)
       .input("Active", sql.Bit, active !== undefined ? active : 1)
       .input("BannerImage", sql.NVarChar(255), bannerimage)
+      .input("IsReadOnly", sql.Bit, isReadOnly !== undefined ? isReadOnly : 0)
       .query(`
-        INSERT INTO FormDetails_dtl (FormId, ColId, SequenceNo, FormNo, UserId, Active, BannerImage)
-        VALUES (@FormId, @ColId, @SequenceNo, @FormNo, @UserId, @Active, @BannerImage);
+        INSERT INTO FormDetails_dtl (FormId, ColId, SequenceNo, FormNo, UserId, Active, BannerImage, IsReadOnly)
+        VALUES (@FormId, @ColId, @SequenceNo, @FormNo, @UserId, @Active, @BannerImage, @IsReadOnly);
 
         SELECT SCOPE_IDENTITY() AS NewId;
       `);
@@ -258,7 +261,7 @@ router.post("/insert-formdetails", verifyToken, async (req, res) => {
 
 // ---------------- PUT: update DynamicColumns and FormDetails_dtl ----------------
 router.put("/update-columns-formdetails/:id", verifyToken, async (req, res) => {
-  const { ColumnName, DataType, SequenceNo, FormId, Active, bannerimage } = req.body;
+  const { ColumnName, DataType, SequenceNo, FormId, Active, bannerimage, isReadOnly } = req.body;
   const colId = req.params.id;
 
   if (!ColumnName || !DataType || !FormId) {
@@ -309,12 +312,14 @@ router.put("/update-columns-formdetails/:id", verifyToken, async (req, res) => {
       .input("UserId", sql.Int, req.user.UserId)
       .input("Active", sql.Bit, Active !== undefined ? Active : 1)
       .input("BannerImage", sql.NVarChar(255), bannerimage)
+      .input("IsReadOnly", sql.Bit, isReadOnly !== undefined ? isReadOnly : 0)
       .query(`
         UPDATE FormDetails_dtl
         SET SequenceNo = @SequenceNo,
             UserId = @UserId,
             Active = @Active,
-            BannerImage = @BannerImage
+            BannerImage = @BannerImage,
+            IsReadOnly = @IsReadOnly
         WHERE FormId = @FormId AND ColId = @ColId
       `);
 
@@ -392,6 +397,37 @@ router.put("/update-isvalid/:id", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Error updating IsValid status:", err);
     res.status(500).json({ message: "Server error while updating IsValid status." });
+  }
+});
+
+// ---------------- PUT: update IsReadOnly status for a form detail ----------------
+router.put("/update-isreadonly/:id", verifyToken, async (req, res) => {
+  const { id } = req.params; // This is FormDetails_dtl.Id
+  const { isReadOnly } = req.body; // Expecting a boolean
+
+  if (typeof isReadOnly !== 'boolean') {
+    return res.status(400).json({ message: "isReadOnly (boolean) is required." });
+  }
+
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input("Id", sql.Int, id)
+      .input("IsReadOnly", sql.Bit, isReadOnly ? 1 : 0)
+      .query(`
+        UPDATE FormDetails_dtl
+        SET IsReadOnly = @IsReadOnly
+        WHERE Id = @Id
+      `);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ message: "Form detail not found." });
+    }
+
+    res.json({ message: "IsReadOnly status updated successfully." });
+  } catch (err) {
+    console.error("Error updating IsReadOnly status:", err);
+    res.status(500).json({ message: "Server error while updating IsReadOnly status." });
   }
 });
 

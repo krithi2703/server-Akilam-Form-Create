@@ -139,25 +139,26 @@ router.post("/submit", upload.any(), async (req, res) => {
       }
     }
 
-    // 🔹 Insert values
-    for (const colId in allValues) {
-      if (Object.hasOwnProperty.call(allValues, colId)) {
-        let value = allValues[colId];
-        if (typeof value === "boolean") value = value ? "1" : "0";
+    // 🔹 Insert values for all columns, even if not provided
+    for (const column of formColumns) {
+      const colId = column.ColId;
+      let value = allValues[colId];
 
-        await transaction
-          .request()
-          .input("FormId", sql.Int, formId)
-          .input("ColId", sql.Int, colId)
-          .input("SubmissionId", sql.BigInt, submissionId)
-          .input("ColumnValues", sql.NVarChar(sql.MAX), String(value ?? ""))
-          .input("EmailorPhoneno", sql.Int, userId)
-          .input("Active", sql.Bit, 1)
-          .query(`
-            INSERT INTO FormValues_dtl (FormId, ColId, SubmissionId, ColumnValues, EmailorPhoneno, Active)
-            VALUES (@FormId, @ColId, @SubmissionId, @ColumnValues, @EmailorPhoneno, @Active);
-          `);
-      }
+      // Handle boolean conversion if necessary
+      if (typeof value === "boolean") value = value ? "1" : "0";
+
+      await transaction
+        .request()
+        .input("FormId", sql.Int, formId)
+        .input("ColId", sql.Int, colId)
+        .input("SubmissionId", sql.BigInt, submissionId)
+        .input("ColumnValues", sql.NVarChar(sql.MAX), String(value ?? null)) // Store null if value is not provided
+        .input("EmailorPhoneno", sql.Int, userId)
+        .input("Active", sql.Bit, 1)
+        .query(`
+          INSERT INTO FormValues_dtl (FormId, ColId, SubmissionId, ColumnValues, EmailorPhoneno, Active)
+          VALUES (@FormId, @ColId, @SubmissionId, @ColumnValues, @EmailorPhoneno, @Active);
+        `);
     }
 
     await transaction.commit();
@@ -174,7 +175,8 @@ router.post("/submit", upload.any(), async (req, res) => {
 
 // ✅ PUT: Update form values
 router.put("/values/:submissionId", upload.any(), async (req, res) => {
-  const { submissionId } = req.params;
+  const { submissionId: rawSubmissionId } = req.params;
+  const submissionId = parseInt(rawSubmissionId, 10); // Parse to integer
   const { formId, ...restOfBody } = req.body;
   const emailOrPhoneNo = req.headers["userid"];
 
@@ -193,16 +195,6 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
 
   try {
     await transaction.begin();
-
-    // 🔹 Get UserId from FormRegister_dtl
-    const userResult = await transaction.request()
-      .input("Emailormobileno", sql.NVarChar, emailOrPhoneNo)
-      .query(`SELECT Id FROM FormRegister_dtl WHERE Emailormobileno = @Emailormobileno`);
-
-    if (userResult.recordset.length === 0) {
-      throw new Error("User not found in FormRegister_dtl");
-    }
-    const userId = userResult.recordset[0].Id;
 
     // 🔹 Fetch column details to get DataType for validation
     const columnsResponse = await transaction.request()
@@ -274,28 +266,32 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
         let value = allValues[colId];
         if (typeof value === "boolean") value = value ? "1" : "0";
 
-        await transaction
+        const parsedColId = parseInt(colId, 10);
+
+        const updateResult = await transaction
           .request()
           .input("FormId", sql.Int, formId)
-          .input("ColId", sql.Int, colId)
+          .input("ColId", sql.Int, parsedColId)
           .input("SubmissionId", sql.BigInt, submissionId)
-          .input("UserId", sql.Int, userId)
-          .input("ColumnValues", sql.NVarChar(sql.MAX), String(value ?? ""))
+          .input("ColumnValues", sql.NVarChar(sql.MAX), value ?? null)
           .query(`
-            UPDATE FormValues_dtl 
+            UPDATE FormValues_dtl
             SET ColumnValues = @ColumnValues
-            WHERE FormId = @FormId 
-              AND ColId = @ColId 
+            WHERE FormId = @FormId
+              AND ColId = @ColId
               AND SubmissionId = @SubmissionId
-              AND EmailorPhoneno = @UserId
               AND Active = 1;
           `);
+
+        if (updateResult.rowsAffected[0] === 0) {
+          console.warn(`No row updated for FormId: ${formId}, ColId: ${colId}, SubmissionId: ${submissionId}`);
+          // Optionally, you could throw an error here or handle it differently
+        }
       }
     }
 
     await transaction.commit();
-    res.status(200).json({ message: "Form values updated successfully!" });
-  } catch (err) {
+    res.status(200).json({ message: "Form values updated successfully!" });  } catch (err) {
     console.log(err);
     await transaction.rollback();
     console.error("Error updating form values:", err);
@@ -376,6 +372,7 @@ router.get("/values", async (req, res) => {
         };
       }
       acc[row.SubmissionId].values[row.ColId] = row.ColumnValues;
+      console.log(`GET /values: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
       return acc;
     }, {});
 
@@ -461,6 +458,7 @@ router.get("/values/all", async (req, res) => {
         };
       }
       acc[row.SubmissionId].values[row.ColId] = row.ColumnValues;
+      console.log(`GET /values/all: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
       return acc;
     }, {});
 
