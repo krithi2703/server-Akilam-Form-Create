@@ -4,8 +4,9 @@ const { sql, poolPromise } = require("./dbConfig");
 const verifyToken = require('./authMiddleware');
 const multer = require('multer');
 const path = require('path');
-const cloudinary = require('./cloudinary');
-const streamifier = require('streamifier');
+const fs = require('fs'); // Add this import
+// const cloudinary = require('./cloudinary');
+// const streamifier = require('streamifier');
 const pdf = require('pdf-parse'); // Import pdf-parse
 
 // Helper function to validate PDF page count from a buffer
@@ -103,19 +104,21 @@ router.post("/submit", upload.any(), async (req, res) => {
               }
             }
 
-            // Upload to Cloudinary
-            const uploadStream = cloudinary.uploader.upload_stream(
-              { resource_type: 'auto', folder: 'form_submissions' },
-              (error, result) => {
-                if (error) {
-                  return reject(error);
-                }
-                allValues[file.fieldname] = result.secure_url;
-                resolve();
-              }
-            );
+            // --- LOCAL FILE SAVE LOGIC ---
+            const filename = Date.now() + path.extname(file.originalname);
+            const uploadDir = path.join(__dirname, '..', 'public', 'uploads'); // Absolute path to public/uploads
+            const absoluteFilePath = path.join(uploadDir, filename);
+            const relativeFilePath = `/uploads/${filename}`; // Path to store in DB
 
-            streamifier.createReadStream(file.buffer).pipe(uploadStream);
+            // Ensure upload directory exists
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            await fs.promises.writeFile(absoluteFilePath, file.buffer);
+            allValues[file.fieldname] = relativeFilePath; // Store relative path in allValues
+            resolve();
+            // --- END LOCAL FILE SAVE LOGIC ---
 
           } catch (uploadError) {
             reject(uploadError);
@@ -134,8 +137,8 @@ router.post("/submit", upload.any(), async (req, res) => {
             return res.status(400).json({ message: error.message });
         }
         // Generic error for other upload failures
-        console.error("Error uploading files to Cloudinary:", error);
-        return res.status(500).json({ message: error.message || "Error uploading one or more files." });
+        console.error("Error uploading files locally:", error); // Changed log message
+        return res.status(500).json({ message: error.message || "Error uploading one or more files locally." }); // Changed message
       }
     }
 
@@ -225,19 +228,21 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
               }
             }
 
-            // Upload to Cloudinary
-            const uploadStream = cloudinary.uploader.upload_stream(
-              { resource_type: 'auto', folder: 'form_submissions' },
-              (error, result) => {
-                if (error) {
-                  return reject(error);
-                }
-                allValues[file.fieldname] = result.secure_url;
-                resolve();
-              }
-            );
+            // --- LOCAL FILE SAVE LOGIC ---
+            const filename = Date.now() + path.extname(file.originalname);
+            const uploadDir = path.join(__dirname, '..', 'public', 'uploads'); // Absolute path to public/uploads
+            const absoluteFilePath = path.join(uploadDir, filename);
+            const relativeFilePath = `/uploads/${filename}`; // Path to store in DB
 
-            streamifier.createReadStream(file.buffer).pipe(uploadStream);
+            // Ensure upload directory exists
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            await fs.promises.writeFile(absoluteFilePath, file.buffer);
+            allValues[file.fieldname] = relativeFilePath; // Store relative path in allValues
+            resolve();
+            // --- END LOCAL FILE SAVE LOGIC ---
 
           } catch (uploadError) {
             reject(uploadError);
@@ -256,8 +261,8 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
             return res.status(400).json({ message: error.message });
         }
         // Generic error for other upload failures
-        console.error("Error uploading files to Cloudinary:", error);
-        return res.status(500).json({ message: "Error uploading one or more files." });
+        console.error("Error uploading files locally:", error); // Changed log message
+        return res.status(500).json({ message: error.message || "Error uploading one or more files locally." }); // Changed message
       }
     }
 
