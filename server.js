@@ -93,7 +93,7 @@ app.use('/api/*', (req, res) => {
 app.use('/public/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ---------------- Serve React Frontend ----------------
-const clientBuildPath = path.join(__dirname, '..', 'Client', 'build'); // <-- fixed
+const clientBuildPath = path.join(__dirname, '..', 'Client', 'dist'); // <-- fixed
 
 app.use(express.static(clientBuildPath));
 
