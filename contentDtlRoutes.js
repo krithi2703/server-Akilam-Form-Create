@@ -100,12 +100,13 @@ router.get('/', verifyToken, async (req, res) => {
 // Endpoint to get content details by FormName
 router.get('/form', verifyToken, async (req, res) => {
   const { UserId } = req.user;
+  const formId = req.headers.formid;
 
   try {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('UserId', sql.Int, UserId)
-      .query(`
+    const request = pool.request().input('UserId', sql.Int, UserId);
+
+    let query = `
         SELECT
             c.C_Id as ContentId,
             c.ContentHeader,
@@ -119,7 +120,14 @@ router.get('/form', verifyToken, async (req, res) => {
         JOIN
             FormMaster_dtl f ON c.FormId = f.FormId
         WHERE c.UserId = @UserId AND c.isActive = 1
-      `);
+      `;
+
+    if (formId) {
+      query += ' AND c.FormId = @FormId';
+      request.input('FormId', sql.Int, formId);
+    }
+    
+    const result = await request.query(query);
     
     const allContent = result.recordset;
     let aggregatedFrontContent = [];
