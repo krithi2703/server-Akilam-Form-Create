@@ -106,9 +106,9 @@ router.post("/submit", upload.any(), async (req, res) => {
 
             // --- LOCAL FILE SAVE LOGIC ---
             const filename = Date.now() + path.extname(file.originalname);
-            const uploadDir = path.join(__dirname, '..', 'public', 'uploads'); // Absolute path to public/uploads
+            const uploadDir = path.join(__dirname, 'public', 'uploads'); // Absolute path to public/uploads
             const absoluteFilePath = path.join(uploadDir, filename);
-            const relativeFilePath = `/uploads/${filename}`; // Path to store in DB
+            const relativeFilePath = `/public/uploads/${filename}`; // Path to store in DB
 
             // Ensure upload directory exists
             if (!fs.existsSync(uploadDir)) {

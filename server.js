@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
 //const allowedOrigins = ['http://136.185.14.8:5558', process.env.FRONTEND_URL];
-//const allowedOrigins = ['http://localhost:5173', process.env.FRONTEND_URL];
+//const allowedOrigins = ['http://localhost:5173', 'http://103.185.75.196:8500', process.env.FRONTEND_URL];
 const allowedOrigins = ['http://103.185.75.196:5558', process.env.FRONTEND_URL];
 
 app.use(
@@ -92,7 +92,7 @@ app.use('/api/*', (req, res) => {
 });
 
 // ---------------- Serve uploaded files ----------------
-app.use('/uploads',express.static(path.join(__dirname, 'public/uploads'))); // For uploaded files
+app.use('/public/uploads',express.static(path.join(__dirname, 'public/uploads'))); // For uploaded files
 
 // ---------------- Serve React Frontend ----------------
 const clientBuildPath = path.join(__dirname, '..', 'Client', 'dist');
