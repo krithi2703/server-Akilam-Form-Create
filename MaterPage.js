@@ -48,7 +48,7 @@ router.post("/upload/image", verifyToken, upload.single("image"), async (req, re
       return res.status(400).json({ error: "No file uploaded." });
     }
     // Return the path to the uploaded file
-    const filePath = `public/uploads/${req.file.filename}`;
+    const filePath = `/uploads/${req.file.filename}`;
     res.status(200).json({ filePath: filePath });
   } catch (err) {
     console.error("File Upload Error:", err);
