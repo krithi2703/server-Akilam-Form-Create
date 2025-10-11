@@ -23,13 +23,9 @@ const { registerRazorpayRoutes } = require('./razorpay');
 const whatsappProxyRouter = require('./whatsappProxy');
 
 const app = express();
-
-//const PORT = process.env.PORT || 5000;
 const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
-//const allowedOrigins = ['http://136.185.14.8:5558', process.env.FRONTEND_URL];
-//const allowedOrigins = ['http://localhost:5173', 'http://103.185.75.196:8500', process.env.FRONTEND_URL];
 const allowedOrigins = ['http://103.185.75.196:5558', process.env.FRONTEND_URL];
 
 app.use(
@@ -54,6 +50,7 @@ const accessLogStream = fs.createWriteStream(
   path.join(__dirname, 'request_log.txt'),
   { flags: 'a' }
 );
+
 app.use((req, res, next) => {
   const log = `Incoming Request: ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`;
   //console.log(log);
@@ -92,13 +89,14 @@ app.use('/api/*', (req, res) => {
 });
 
 // ---------------- Serve uploaded files ----------------
-app.use('/public/uploads',express.static(path.join(__dirname, 'public/uploads'))); // For uploaded files
+app.use('/public/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ---------------- Serve React Frontend ----------------
-const clientBuildPath = path.join(__dirname, '..', 'Client', 'dist');
+const clientBuildPath = path.join(__dirname, '..', 'Client', 'build'); // <-- fixed
+
 app.use(express.static(clientBuildPath));
 
-// Catchall: send index.html for any non-API route
+// Catch-all: send index.html for any non-API route
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
