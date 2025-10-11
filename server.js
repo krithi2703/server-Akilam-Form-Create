@@ -95,7 +95,7 @@ app.use('/api/*', (req, res) => {
 app.use('/public/uploads',express.static(path.join(__dirname, 'public/uploads'))); // For uploaded files
 
 // ---------------- Serve React Frontend ----------------
-const clientBuildPath = path.join(__dirname, '..', 'Client', 'dist');
+const clientBuildPath = path.join(__dirname, '..', 'Client', 'build');
 app.use(express.static(clientBuildPath));
 
 // Catchall: send index.html for any non-API route
