@@ -161,7 +161,7 @@ router.get('/:formId', verifyToken, async (req, res) => {
     return res.status(400).json({ message: 'FormId is required' });
   }
 
-  console.log('Received formId for content details:', formId); // Debugging line
+  // console.log('Received formId for content details:', formId); // Debugging line
 
   try {
     const pool = await poolPromise;

@@ -297,7 +297,7 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
 
     await transaction.commit();
     res.status(200).json({ message: "Form values updated successfully!" });  } catch (err) {
-    console.log(err);
+    //console.log(err);
     await transaction.rollback();
     console.error("Error updating form values:", err);
     res.status(500).json({ message: "Server error while updating form values." });
@@ -377,7 +377,7 @@ router.get("/values", async (req, res) => {
         };
       }
       acc[row.SubmissionId].values[row.ColId] = row.ColumnValues;
-      console.log(`GET /values: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
+      //console.log(`GET /values: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
       return acc;
     }, {});
 
@@ -463,7 +463,7 @@ router.get("/values/all", async (req, res) => {
         };
       }
       acc[row.SubmissionId].values[row.ColId] = row.ColumnValues;
-      console.log(`GET /values/all: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
+      //console.log(`GET /values/all: SubmissionId: ${row.SubmissionId}, ColId: ${row.ColId}, ColumnValues: ${row.ColumnValues}`);
       return acc;
     }, {});
 

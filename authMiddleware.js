@@ -52,7 +52,7 @@ function verifyToken(req, res, next) {
 
     // Attach user info to request object
     req.user = { UserId: userId, ...decoded };
-    console.log('🔹 User attached to request:', req.user);
+    //console.log('🔹 User attached to request:', req.user);
 
     next(); // Proceed to the next middleware or route handler
   } catch (err) {

@@ -56,7 +56,7 @@ const accessLogStream = fs.createWriteStream(
 );
 app.use((req, res, next) => {
   const log = `Incoming Request: ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`;
-  console.log(log);
+  //console.log(log);
   accessLogStream.write(log + '\n');
   next();
 });

@@ -116,13 +116,13 @@ router.get("/user/form-columns", verifyToken, async (req, res) => {
     const { formId, formNo } = req.query;
 
     if (!formId) {
-      console.log("[FormColumns] Error: formId is required");
+      //console.log("[FormColumns] Error: formId is required");
       return res.status(400).json({ message: "formId is required" });
     }
 
     const parsedFormId = parseInt(formId, 10);
     if (isNaN(parsedFormId)) {
-      console.log(`[FormColumns] Error: Invalid formId: ${formId}`);
+      //console.log(`[FormColumns] Error: Invalid formId: ${formId}`);
       return res.status(400).json({ message: "Invalid formId" });
     }
 
