@@ -135,7 +135,7 @@ router.post("/submit", upload.any(), async (req, res) => {
         }
         // Generic error for other upload failures
         console.error("Error uploading files to Cloudinary:", error);
-        return res.status(500).json({ message: "Error uploading one or more files." });
+        return res.status(500).json({ message: error.message || "Error uploading one or more files." });
       }
     }
 
