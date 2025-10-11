@@ -14,10 +14,10 @@ const validatePdfPageCount = async (buffer) => {
     const pdfData = await pdf(buffer);
     const pageCount = pdfData.numpages;
 
-    if (pageCount >= 2 && pageCount <= 3) {
+    if (pageCount >= 1 && pageCount <= 2) {
       return { isValid: true, message: "" };
     } else {
-      return { isValid: false, message: "PDF must be between 2 and 3 pages." };
+      return { isValid: false, message: "PDF must be between 1 and 2 pages." };
     }
   } catch (error) {
     console.error("Error parsing PDF for page count:", error);
