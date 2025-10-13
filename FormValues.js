@@ -142,9 +142,18 @@ router.post("/submit", upload.any(), async (req, res) => {
       }
     }
 
+    const displayOnlyDataTypes = ["h1", "h2", "h3", "h4", "h5", "h6", "p"];
+
     // 🔹 Insert values for all columns, even if not provided
     for (const column of formColumns) {
       const colId = column.ColId;
+      const dataType = column.DataType?.toLowerCase();
+
+      // Skip display-only columns
+      if (displayOnlyDataTypes.includes(dataType)) {
+        continue;
+      }
+
       let value = allValues[colId];
 
       // Handle boolean conversion if necessary
@@ -266,8 +275,18 @@ router.put("/values/:submissionId", upload.any(), async (req, res) => {
       }
     }
 
+    const displayOnlyDataTypes = ["h1", "h2", "h3", "h4", "h5", "h6", "p"];
+
     for (const colId in allValues) {
       if (Object.hasOwnProperty.call(allValues, colId)) {
+        const column = formColumns.find(c => c.ColId === parseInt(colId, 10));
+        const dataType = column?.DataType?.toLowerCase();
+
+        // Skip display-only columns
+        if (displayOnlyDataTypes.includes(dataType)) {
+          continue;
+        }
+
         let value = allValues[colId];
         if (typeof value === "boolean") value = value ? "1" : "0";
 

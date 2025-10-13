@@ -28,6 +28,7 @@ const PORT = process.env.PORT || 8500;
 // ---------------- Middleware ----------------
 const allowedOrigins = ['http://103.185.75.196:5558', process.env.FRONTEND_URL];
 //const allowedOrigins = ['http://localhost:5173', process.env.FRONTEND_URL];
+//const allowedOrigins = ['http://136.185.14.8:5558', process.env.FRONTEND_URL];
 
 app.use(
   cors({
