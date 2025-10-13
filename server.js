@@ -39,7 +39,7 @@ app.use(
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'userid'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'userid', 'formid'],
     credentials: true,
   })
 );

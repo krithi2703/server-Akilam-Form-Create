@@ -34,10 +34,15 @@ router.post('/', verifyToken, async (req, res) => {
 router.get('/', verifyToken, async (req, res) => {
   const { UserId } = req.user;
 
+  // Validate UserId from req.user
+  if (isNaN(parseInt(UserId)) || !Number.isInteger(parseFloat(UserId))) {
+    console.error("Invalid UserId from token:", UserId);
+    return res.status(401).json({ message: "Unauthorized: Invalid User ID in token." });
+  }
+
   try {
     const pool = await poolPromise;
     const result = await pool.request()
-      .input('UserId', sql.Int, UserId)
       .query(`
         SELECT
             c.C_Id as ContentId,
@@ -57,7 +62,7 @@ router.get('/', verifyToken, async (req, res) => {
         JOIN
             FormMaster_dtl f ON c.FormId = f.FormId
         WHERE
-            c.UserId = @UserId AND c.isActive = 1
+            c.isActive = 1
         ORDER BY
             f.FormName, c.C_Id ASC
       `);
@@ -100,12 +105,15 @@ router.get('/', verifyToken, async (req, res) => {
 // Endpoint to get content details by FormName
 router.get('/form', verifyToken, async (req, res) => {
   const { UserId } = req.user;
-  const formId = req.headers.formid;
+        const formId = parseInt(req.headers.formid, 10); // Get formId from headers and parse as integer
+        if (isNaN(formId)) {
+            return res.status(400).send("Invalid FormId provided.");
+        }
 
   try {
-    const pool = await poolPromise;
-    const request = pool.request().input('UserId', sql.Int, UserId);
-
+        const pool = await poolPromise;
+        console.log('Before input: typeof UserId =', typeof UserId, ', Number.isInteger(UserId) =', Number.isInteger(UserId));
+        const request = pool.request();
     let query = `
         SELECT
             c.C_Id as ContentId,
@@ -119,7 +127,7 @@ router.get('/form', verifyToken, async (req, res) => {
             Content_dtl c
         JOIN
             FormMaster_dtl f ON c.FormId = f.FormId
-        WHERE c.UserId = @UserId AND c.isActive = 1
+        WHERE c.isActive = 1
       `;
 
     if (formId) {

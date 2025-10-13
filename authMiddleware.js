@@ -45,13 +45,15 @@ function verifyToken(req, res, next) {
 
     // Normalize user ID from token (handles different naming conventions)
     const userId = decoded.UserId || decoded.id || decoded.userId || decoded.Id;
-    if (!userId) {
-      console.warn('⚠️ Invalid token: UserId missing');
-      return res.status(401).json({ message: 'Invalid token: UserId missing' });
+    const parsedUserId = parseInt(userId, 10);
+
+    if (isNaN(parsedUserId) || !Number.isInteger(parsedUserId) || parsedUserId < -2147483648 || parsedUserId > 2147483647) {
+      console.warn('⚠️ Invalid token: UserId is not a valid integer or out of range');
+      return res.status(401).json({ message: 'Invalid token: UserId is not a valid integer or out of range' });
     }
 
     // Attach user info to request object
-    req.user = { UserId: userId, ...decoded };
+    req.user = { UserId: parsedUserId, ...decoded };
     //console.log('🔹 User attached to request:', req.user);
 
     next(); // Proceed to the next middleware or route handler
