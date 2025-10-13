@@ -360,7 +360,7 @@ router.get("/values", async (req, res) => {
     const columnsResult = await pool.request()
       .input("FormId", sql.Int, formId)
       .query(`
-        SELECT DISTINCT dc.Id as ColId, dc.ColumnName, dc.DataType, fd.SequenceNo
+        SELECT DISTINCT dc.Id as ColId, dc.ColumnName, dc.DataType, fd.SequenceNo, fd.IsReadOnly
         FROM FormDetails_dtl fd
         JOIN DynamicColumns dc ON fd.ColId = dc.Id
         WHERE fd.FormId = @FormId
@@ -432,7 +432,7 @@ router.get("/values/all", async (req, res) => {
     const columnsResult = await pool.request()
       .input("FormId", sql.Int, formId)
       .query(`
-        SELECT DISTINCT dc.Id as ColId, dc.ColumnName, dc.DataType, fd.SequenceNo
+        SELECT DISTINCT dc.Id as ColId, dc.ColumnName, dc.DataType, fd.SequenceNo, fd.IsReadOnly
         FROM FormDetails_dtl fd
         JOIN DynamicColumns dc ON fd.ColId = dc.Id
         WHERE fd.FormId = @FormId
