@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('./dbConfig');
 const jwt = require('jsonwebtoken');
+const sendEmail = require('./emailService');
 
-// TODO: Move this to an environment variable
 const JWT_SECRET = process.env.JWT_SECRET;
+const otps = new Map();
 
 // ---------------------- INSERT: Register user (provisional) ----------------------
 router.post('/insert', async (req, res) => {
-    //console.log('Formregistred.js: /insert route hit!');
-    const { identifier, formId } = req.body;
+    const { identifier, formId, type } = req.body;
 
     if (!identifier || !formId) {
         return res.status(400).json({ message: 'Identifier and Form ID are required' });
@@ -18,13 +18,11 @@ router.post('/insert', async (req, res) => {
     try {
         const pool = await poolPromise;
 
-        // ✅ Check if the user already exists
         const checkUser = await pool.request()
             .input('Emailormobileno', sql.VarChar, identifier)
             .query('SELECT * FROM FormRegister_dtl WHERE Emailormobileno = @Emailormobileno');
 
         if (checkUser.recordset.length > 0) {
-            // User exists → send token for OTP verification
             const user = checkUser.recordset[0];
             const token = jwt.sign(
                 { id: user.Emailormobileno, name: user.Emailormobileno, isFormOnlyUser: true },
@@ -39,11 +37,10 @@ router.post('/insert', async (req, res) => {
                 isExistingUser: true,
             });
         } else {
-            // New user → insert as not verified yet
             const result = await pool.request()
                 .input('Emailormobileno', sql.VarChar, identifier)
-                .input('IsActive', sql.Bit, 1) // Active
-                .input('isVerified', sql.Bit, 0) // Not verified
+                .input('IsActive', sql.Bit, 1)
+                .input('isVerified', sql.Bit, 0)
                 .query(`
                     INSERT INTO FormRegister_dtl (Emailormobileno, IsActive, isVerified) 
                     VALUES (@Emailormobileno, @IsActive, @isVerified); 
@@ -74,44 +71,43 @@ router.post('/insert', async (req, res) => {
     }
 });
 
-// ---------------------- VERIFY: Finalize registration ----------------------
-router.post('/verify', async (req, res) => {
-    const { identifier, firebaseUID } = req.body;
+// ---------------------- SEND OTP ----------------------
+router.post('/send-otp', async (req, res) => {
+    const { identifier, type } = req.body;
 
-    if (!identifier || !firebaseUID) {
-        return res.status(400).json({ message: 'Identifier and Firebase UID are required' });
+    if (!identifier || !type) {
+        return res.status(400).json({ message: 'Identifier and type are required' });
     }
 
     try {
-        const pool = await poolPromise;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        otps.set(identifier, { otp, expiresAt: Date.now() + 10 * 60 * 1000 }); // 10 minutes expiry
 
-        const result = await pool.request()
-            .input('Emailormobileno', sql.VarChar, identifier)
-            .input('FirebaseUID', sql.VarChar, firebaseUID) // ✅ consistent name
-            .query(`
-                UPDATE FormRegister_dtl 
-                SET isVerified = 1, FireBaseUID = @FirebaseUID 
-                WHERE Emailormobileno = @Emailormobileno
-            `);
-
-        if (result.rowsAffected[0] === 0) {
-            return res.status(404).json({ message: 'User not found or already verified.' });
+        if (type === 'phone') {
+            // This is where you would integrate with a WhatsApp API provider
+            // For now, we will just log the OTP
+            console.log(`WhatsApp OTP for ${identifier}: ${otp}`);
+            res.status(200).json({ message: 'OTP sent to your phone number.' });
+        } else if (type === 'email') {
+            const subject = 'Email Verification OTP';
+            const text = `Your OTP for email verification is: ${otp}`;
+            sendEmail(identifier, subject, text);
+            res.status(200).json({ message: 'OTP sent to your email address.' });
+        } else {
+            res.status(400).json({ message: 'Invalid OTP type' });
         }
-
-        res.status(200).json({ message: 'User verified successfully.' });
-
     } catch (err) {
-        console.error('Database error during verification:', err);
+        console.error('Error sending OTP:', err);
         res.status(500).json({
-            message: 'Server error during verification',
+            message: 'Server error while sending OTP',
             error: err.message,
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
     }
 });
 
-// ---------------------- VERIFY WHATSAPP OTP ----------------------
-router.post('/verify-whatsapp-otp', async (req, res) => {
+// ---------------------- VERIFY OTP ----------------------
+router.post('/verify-otp', async (req, res) => {
     const { identifier, otp } = req.body;
 
     if (!identifier || !otp) {
@@ -119,11 +115,23 @@ router.post('/verify-whatsapp-otp', async (req, res) => {
     }
 
     try {
-        // In a real application, you would retrieve the stored OTP for the identifier
-        // from your database and compare it with the received OTP.
-        // You would also check for OTP expiry.
+        const storedOtpData = otps.get(identifier);
 
-        // If OTP is valid, generate a token for the user
+        if (!storedOtpData) {
+            return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
+        }
+
+        if (storedOtpData.expiresAt < Date.now()) {
+            otps.delete(identifier);
+            return res.status(400).json({ message: 'OTP expired' });
+        }
+
+        if (storedOtpData.otp !== otp) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        otps.delete(identifier);
+
         const pool = await poolPromise;
         const result = await pool.request()
             .input('Emailormobileno', sql.VarChar, identifier)
@@ -140,22 +148,20 @@ router.post('/verify-whatsapp-otp', async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        // Update user as verified in the database (if not already)
         await pool.request()
             .input('Emailormobileno', sql.VarChar, identifier)
-            .input('FirebaseUID', sql.VarChar, otp) // No FirebaseUID in this flow
-
+            .input('FirebaseUID', sql.VarChar, otp)
             .query(`
                 UPDATE FormRegister_dtl 
-                SET isVerified = 1 ,
+                SET isVerified = 1,
                     FireBaseUID = @FirebaseUID
-                WHERE Emailormobileno = @Emailormobileno AND isVerified = 0
+                WHERE Emailormobileno = @Emailormobileno
             `);
 
         res.status(200).json({ message: 'OTP verified successfully.', token: token, id: user.Emailormobileno });
 
     } catch (err) {
-        console.error('Server error during WhatsApp OTP verification:', err);
+        console.error('Server error during OTP verification:', err);
         res.status(500).json({
             message: 'Server error during OTP verification',
             error: err.message,

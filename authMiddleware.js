@@ -27,7 +27,14 @@ function verifyToken(req, res, next) {
       return next();
     }
 
+    const isFormOnlyUser = req.headers['is-form-only-user'] === 'true';
     const userIdFromHeader = req.headers['userid'];
+
+    if (isFormOnlyUser && userIdFromHeader) {
+      req.user = { UserId: userIdFromHeader };
+      return next();
+    }
+
     if (userIdFromHeader && !isNaN(parseInt(userIdFromHeader, 10))) {
      // console.log('🔹 User ID from header:', userIdFromHeader);
       req.user = { UserId: parseInt(userIdFromHeader, 10) };

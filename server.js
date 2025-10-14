@@ -40,7 +40,7 @@ app.use(
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'userid', 'formid'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'userid', 'formid', 'is-form-only-user'],
     credentials: true,
   })
 );
