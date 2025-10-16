@@ -43,6 +43,7 @@ router.get('/', verifyToken, async (req, res) => {
   try {
     const pool = await poolPromise;
     const result = await pool.request()
+      .input('UserId', sql.Int, UserId)
       .query(`
         SELECT
             c.C_Id as ContentId,
@@ -62,7 +63,7 @@ router.get('/', verifyToken, async (req, res) => {
         JOIN
             FormMaster_dtl f ON c.FormId = f.FormId
         WHERE
-            c.isActive = 1
+            c.isActive = 1 AND c.UserId = @UserId
         ORDER BY
             f.FormName, c.C_Id ASC
       `);
