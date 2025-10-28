@@ -26,16 +26,19 @@ const app = express();
 const PORT = process.env.PORT || 8500;
 
 // ---------------- Middleware ----------------
-const allowedOrigins = ['http://103.185.75.196:5558', process.env.FRONTEND_URL];
-//const allowedOrigins = ['http://localhost:5173', process.env.FRONTEND_URL];
-//const allowedOrigins = ['http://136.185.14.8:8500/api', process.env.FRONTEND_URL];
 
+
+console.log("--- DEBUG: Initializing CORS configuration ---");
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    origin: (origin, callback) => {
+      console.log(`--- DEBUG: CORS check for origin: ${origin} ---`);
+      const allowedOrigins = ['http://localhost:5173', 'http://FormCraft.com', 'https://FormCraft.com', 'http://103.185.75.196:5558'];
+      if (!origin || allowedOrigins.includes(origin)) {
+        console.log(`--- DEBUG: CORS check PASSED for origin: ${origin} ---`);
         callback(null, true);
       } else {
+        console.error(`--- DEBUG: CORS check FAILED for origin: ${origin} ---`);
         callback(new Error('Not allowed by CORS'));
       }
     },
